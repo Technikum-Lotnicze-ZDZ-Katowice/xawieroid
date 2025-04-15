@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odbijające się kółko - Poziomy i Punkty</title>
+    <style>
+        canvas { border: 2px solid black; background-color: black; }
+        #gameOver, #score {
+            position: absolute;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+        }
+        #gameOver { display: none; top: 50%; left: 50%; transform: translate(-50%, -50%); color: red; }
+        #score { top: 420px; left: 870px; }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="1820" height="900"></canvas>
+    <div id="gameOver">Game Over</div>
+    <div id="score">Punkty: 0</div>
+    <script>
+        const canvas = document.getElementById("canvas");
+        const ctx = canvas.getContext("2d");
+        let x = 150, y = 100, dx = 4, dy = 4, radius = 10;
+        let platformWidth = 100, platformHeight = 10, platformX = 870;
+        const platformSpeed = 10;
+        let isMovingLeft = false, isMovingRight = false;
+        let gameOver = false, score = 0;
+        
+        function generateLevel(rows) {
+            let bricks = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < 24; c++) {
+                    bricks.push({ x: c * 76, y: r * 25, width: 71, height: 20 });
+                }
+            }
+            return bricks;
+        }
+        
+        const levels = [generateLevel(3), generateLevel(4), generateLevel(5), generateLevel(6)];
+        let currentLevel = 0;
+        let bricks = levels[currentLevel];
+
+        function drawCircle() {
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.fillStyle = "blue";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawPlatform() {
+            ctx.beginPath();
+            ctx.roundRect(platformX, canvas.height - platformHeight - 30, platformWidth, platformHeight, 5);
+            ctx.fillStyle = "green";
+            ctx.fill();
+            ctx.closePath();
+        }
+
+        function drawBricks() {
+            bricks.forEach(brik => {
+                ctx.beginPath();
+                ctx.rect(brik.x, brik.y, brik.width, brik.height);
+                ctx.fillStyle = "red";
+                ctx.fill();
+                ctx.closePath();
+            });
+        }
+
+        function moveCircle() {
+            if (gameOver) return;
+            x += dx;
+            y += dy;
+
+            if (x + radius > canvas.width || x - radius < 0) dx = -dx;
+            if (y - radius < 0) dy = -dy;
+
+            if (y + radius > canvas.height) {
+                gameOver = true;
+                document.getElementById("gameOver").style.display = "block";
+            }
+
+            if (y + radius > canvas.height - platformHeight - 30 && x > platformX && x < platformX + platformWidth) dy = -dy;
+            
+            bricks = bricks.filter(brik => {
+                if (x + radius > brik.x && x - radius < brik.x + brik.width && y + radius > brik.y && y - radius < brik.y + brik.height) {
+                    dy = -dy;
+                    score += 10;
+                    document.getElementById("score").textContent = "Punkty: " + score;
+                    return false;
+                }
+                return true;
+            });
+
+            if (bricks.length === 0 && levels[currentLevel + 1]) {
+                currentLevel++;
+                bricks = levels[currentLevel];
+            }
+
+            drawCircle();
+        }
+
+        function movePlatform() {
+            if (isMovingLeft && platformX > 0) platformX -= platformSpeed;
+            if (isMovingRight && platformX < canvas.width - platformWidth) platformX += platformSpeed;
+            drawPlatform();
+        }
+
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "ArrowLeft") isMovingLeft = true;
+            if (event.key === "ArrowRight") isMovingRight = true;
+        });
+
+        document.addEventListener("keyup", (event) => {
+            if (event.key === "ArrowLeft") isMovingLeft = false;
+            if (event.key === "ArrowRight") isMovingRight = false;
+        });
+
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            moveCircle();
+            movePlatform();
+            drawBricks();
+            requestAnimationFrame(gameLoop);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
